@@ -11,8 +11,10 @@ class NetWorth extends React.Component {
         super(props);
         this.state = {
             transactions: [],
-            exchangeRateInfo: EXCHANGE_RATES,
+            BTCRatesOverTime: [],
+            ETHRatesOverTime: [],
             netWorthHistory: [],
+            useTransactionTimeExchangeRate: true,
         }
     }
 
@@ -25,7 +27,7 @@ class NetWorth extends React.Component {
      * Alternatively, since this information is static, we could theoretically also just
      * save it to a JSON file and access it locally.
      */
-    getTransactions() {
+    getTransactions = () =>  {
         TransactionsAPI.getTransactionData(TransactionsAPI.transactionHistoryEndpoint)
         .then(transactionHistoryResponse=> {
             console.log({transactionHistoryResponse});
@@ -34,7 +36,7 @@ class NetWorth extends React.Component {
             transactions.sort((a,b) => new Date(a.createdAt) - new Date(b.createdAt))
             console.log({transactions});
             this.setState({transactions}, () => {
-                this.calculateNetWorth();
+                this.calculateBalances();
             })
         })
     }
@@ -43,8 +45,8 @@ class NetWorth extends React.Component {
      * Given a list of transactions and information about the exchange rate, find the user's
      * net worth over time.
      */
-    calculateNetWorth() {
-        const { transactions } = this.state;
+    calculateBalances = () => {
+        const { transactions, useTransactionTimeExchangeRate } = this.state;
         
         let netWorthHistory = []
         transactions.forEach((transaction, index) => {
@@ -84,20 +86,113 @@ class NetWorth extends React.Component {
                 
 
             }
-            const netWorthAmount = newBalances["CAD"] + (newBalances["BTC"] * EXCHANGE_RATES["BTC_CAD"]) + (newBalances["ETH"] * EXCHANGE_RATES["ETH_CAD"]);
             const netWorth = {
                 balances: newBalances,
-                date,
-                netWorth: Number.parseInt(netWorthAmount),
+                date
             }
             netWorthHistory.push(netWorth);
 
         })
 
         console.log({netWorthHistory});
+        this.setState({netWorthHistory}, () => {
+            this.calculateNetWorth(useTransactionTimeExchangeRate);
+        });
+
+    }
+
+
+    calculateDailyNetWorth = (useTransactionTimeExchangeRate=true) => {
+        const { netWorthHistory } = this.state;
+        let netWorthAmount;
+
+        if (useTransactionTimeExchangeRate) {
+            const { BTCRatesOverTime, ETHRatesOverTime } = this.state;
+
+            if (BTCRatesOverTime.length === 0 || ETHRatesOverTime.length === 0) {
+                TransactionsAPI.getExchangeRate("BTC")
+                .then(BTCResponse => {
+                    console.log({BTCResponse});
+                    this.setState({BTCRatesOverTime: BTCResponse.data}, () => {
+                        TransactionsAPI.getExchangeRate("ETH")
+                        .then(ETHResponse => {
+                            console.log({ETHResponse});
+                            this.setState({ETHRatesOverTime: ETHResponse.data});
+                            this.calculateDailyNetWorth(true);
+                        })
+                    });
+                    
+                })
+            } else {
+                this.calculateDailyNetWorth(true);
+            }
+
+        } else {
+            this.calculateDailyNetWorth(false);
+        }
+
+        
+    }
+
+    getExchangeRatesOnGivenDay = (netWorth) => {
+        const { BTCRatesOverTime, ETHRatesOverTime } = this.state;
+
+        /**
+         * The API uses the pair `CAD_BTC` but the constant exchange rate uses `BTC_CAD`
+         * so we will stick with `BTC_CAD` to stay consistent.
+         */
+        const exchangeRatesOnGivenDay = {
+            "BTC_CAD": "",
+            "ETH_CAD": "",
+        }
+        const transactionDay = netWorth.date.substring(0,10);
+
+        for (var i = 0; i < BTCRatesOverTime.length; i++) {
+            const rateDay = BTCRatesOverTime[i].createdAt.substring(0,10)
+            if(transactionDay === rateDay) {
+                exchangeRatesOnGivenDay["BTC_CAD"] = BTCRatesOverTime[i]["midMarketRate"];
+                break
+            }
+        }
+
+        for (var i = 0; i < ETHRatesOverTime.length; i++) {
+            const rateDay = ETHRatesOverTime[i].createdAt.substring(0,10)
+            if(transactionDay === rateDay) {
+                exchangeRatesOnGivenDay["ETH_CAD"] = ETHRatesOverTime[i]["midMarketRate"];
+                break
+            }
+        }
+
+        return exchangeRatesOnGivenDay;
+
+
+
+    }
+
+    convertBalancesToFiat = (balances, exchangeRates) => {
+
+        const netWorthAmount = balances["CAD"] + (balances["BTC"] * exchangeRates["BTC_CAD"]) + (balances["ETH"] * exchangeRates["ETH_CAD"]);
+
+        return netWorthAmount;
+    }
+
+    calculateNetWorth = (useTransactionTimeExchangeRate=true) => {
+
+        const { netWorthHistory } = this.state;
+
+        netWorthHistory.forEach(netWorth => {
+            
+            let netWorthAmount;
+            if (useTransactionTimeExchangeRate) {
+                const exchangeRatesOnGivenDay = this.getExchangeRatesOnGivenDay(netWorth)
+                netWorthAmount = this.convertBalancesToFiat(netWorth.balances, exchangeRatesOnGivenDay);
+            } else {
+                netWorthAmount = this.convertBalancesToFiat(netWorth.balances, EXCHANGE_RATES);
+            }
+            netWorth.netWorth = netWorthAmount
+        })
+
         this.setState({netWorthHistory});
-
-
     }
 
     render() {
