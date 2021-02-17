@@ -1,8 +1,8 @@
 {
   "files": {
     "main.css": "/shakepay-interview-web/static/css/main.8c8b27cf.chunk.css",
-    "main.js": "/shakepay-interview-web/static/js/main.d3d20a86.chunk.js",
-    "main.js.map": "/shakepay-interview-web/static/js/main.d3d20a86.chunk.js.map",
+    "main.js": "/shakepay-interview-web/static/js/main.fa0cabf6.chunk.js",
+    "main.js.map": "/shakepay-interview-web/static/js/main.fa0cabf6.chunk.js.map",
     "runtime-main.js": "/shakepay-interview-web/static/js/runtime-main.dea8bb32.js",
     "runtime-main.js.map": "/shakepay-interview-web/static/js/runtime-main.dea8bb32.js.map",
     "static/js/2.93c22a65.chunk.js": "/shakepay-interview-web/static/js/2.93c22a65.chunk.js",
@@ -18,6 +18,6 @@
     "static/js/runtime-main.dea8bb32.js",
     "static/js/2.93c22a65.chunk.js",
     "static/css/main.8c8b27cf.chunk.css",
-    "static/js/main.d3d20a86.chunk.js"
+    "static/js/main.fa0cabf6.chunk.js"
   ]
 }
