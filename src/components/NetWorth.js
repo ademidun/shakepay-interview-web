@@ -96,15 +96,23 @@ class NetWorth extends React.Component {
 
         console.log({netWorthHistory});
         this.setState({netWorthHistory}, () => {
-            this.calculateNetWorth(useTransactionTimeExchangeRate);
+            this.getExchangeRateAndNetWorth(useTransactionTimeExchangeRate);
         });
 
     }
+    
+    toggleTransactionTimeExchangeRate = () => {
+
+        const { useTransactionTimeExchangeRate } = this.state;
+
+        this.setState({useTransactionTimeExchangeRate: !useTransactionTimeExchangeRate}, () => {
+            this.getExchangeRateAndNetWorth(!useTransactionTimeExchangeRate);
+        })
+        
+    }
 
 
-    calculateDailyNetWorth = (useTransactionTimeExchangeRate=true) => {
-        const { netWorthHistory } = this.state;
-        let netWorthAmount;
+    getExchangeRateAndNetWorth = (useTransactionTimeExchangeRate=true) => {
 
         if (useTransactionTimeExchangeRate) {
             const { BTCRatesOverTime, ETHRatesOverTime } = this.state;
@@ -118,17 +126,17 @@ class NetWorth extends React.Component {
                         .then(ETHResponse => {
                             console.log({ETHResponse});
                             this.setState({ETHRatesOverTime: ETHResponse.data});
-                            this.calculateDailyNetWorth(true);
+                            this.calculateNetWorth(useTransactionTimeExchangeRate);
                         })
                     });
                     
                 })
             } else {
-                this.calculateDailyNetWorth(true);
+                this.calculateNetWorth(useTransactionTimeExchangeRate);
             }
 
         } else {
-            this.calculateDailyNetWorth(false);
+            this.calculateNetWorth(useTransactionTimeExchangeRate);
         }
 
         
@@ -197,7 +205,7 @@ class NetWorth extends React.Component {
 
     render() {
 
-        const { netWorthHistory } = this.state
+        const { netWorthHistory, useTransactionTimeExchangeRate } = this.state
 
         const data = {
             labels: netWorthHistory.map(netWorth => netWorth.date),
@@ -229,6 +237,9 @@ class NetWorth extends React.Component {
         return (
           <div>
             <h2>Net Worth</h2>
+            <button onClick={this.toggleTransactionTimeExchangeRate}>
+                {useTransactionTimeExchangeRate ? "Use Constant Exchange Rate": "Use Transaction Time Exchange Rate"}
+            </button>
             <Line data={data} />
           </div>
         );
